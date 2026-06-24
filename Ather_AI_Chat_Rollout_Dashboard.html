@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ather · AI chat rollout</title>
+<style>
+  :root{
+    --green:#18B258; --green-d:#00A651; --ink:#16181d; --muted:#6b6f76;
+    --line:#e7e8eb; --bg:#f6f7f8; --card:#ffffff;
+    --now-bg:#18B258; --now-tx:#ffffff;
+    --next-bg:#bde9cd; --next-tx:#075d33;
+    --later-bg:#eceef1; --later-tx:#54585f;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Arial,"Helvetica Neue",Helvetica,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5;}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 22px 40px;}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:26px 28px 30px;}
+  .tick{width:42px;height:5px;background:var(--green);border-radius:3px;margin-bottom:14px;}
+  .head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;}
+  h1{font-size:25px;font-weight:700;margin:0;letter-spacing:-0.2px;}
+  .asof{font-size:13px;color:var(--muted);white-space:nowrap;}
+  .sub{font-size:14px;color:var(--muted);margin:6px 0 0;}
+  .ctx{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0 6px;}
+  .ctx .chip{flex:1;min-width:210px;background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;}
+  .ctx .big{font-size:22px;font-weight:700;}
+  .ctx .lbl{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .sech{display:flex;align-items:center;gap:10px;margin:26px 0 12px;}
+  .sech span{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9aa0a6;}
+  .sech .rule{flex:1;height:1px;background:var(--line);}
+  .waves{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .wave{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card);}
+  .wave.dim{opacity:.32;}
+  .whead{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .pill{font-size:12px;font-weight:700;padding:2px 11px;border-radius:20px;}
+  .p-now{background:var(--now-bg);color:#fff;}
+  .p-next{background:var(--next-bg);color:var(--next-tx);}
+  .p-later{background:var(--later-bg);color:var(--later-tx);}
+  .wdate{font-size:12px;color:var(--muted);}
+  .ph{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);}
+  .ph:first-of-type{border-top:none;}
+  .num{flex:none;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:13px;font-weight:700;}
+  .n-now{background:var(--now-bg);color:#fff;}
+  .n-next{background:var(--next-bg);color:var(--next-tx);}
+  .n-later{background:var(--later-bg);color:var(--later-tx);}
+  .pt{font-size:14px;font-weight:700;}
+  .pt .arrow{font-weight:400;color:#aeb3b9;}
+  .ps{font-size:12.5px;color:var(--muted);}
+  .cut{font-size:12px;font-weight:700;color:var(--green-d);}
+  /* matrix */
+  .mx{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:7px;}
+  .mh{font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;}
+  .rl{font-size:13.5px;font-weight:700;display:flex;align-items:center;}
+  .cell{border-radius:10px;padding:9px 6px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;min-height:58px;}
+  .cell b{font-size:17px;font-weight:700;line-height:1.1;}
+  .cell small{font-size:11.5px;margin-top:2px;}
+  .c-now{background:var(--now-bg);color:#fff;}
+  .c-next{background:var(--next-bg);color:var(--next-tx);}
+  .c-later{background:var(--later-bg);color:var(--later-tx);}
+  .c-empty{border:1px dashed #d4d7db;color:#b3b8be;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:16px;font-size:12.5px;color:var(--muted);}
+  .lg{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;}
+  .sw{width:13px;height:13px;border-radius:4px;}
+  .refrain{margin:22px 0 2px;font-size:16px;font-weight:700;color:var(--green-d);}
+  .src{font-size:11.5px;color:#9aa0a6;margin-top:18px;border-top:1px solid var(--line);padding-top:12px;}
+  .brand{font-weight:700;letter-spacing:2px;color:var(--ink);}
+  .rgrid{--cols:44px 1.45fr 2fr 2.05fr;}
+  .rhead{display:grid;grid-template-columns:var(--cols);gap:14px;font-size:12px;font-weight:700;
+    color:var(--muted);padding:0 0 9px;border-bottom:1px solid var(--line);}
+  .rrow{display:grid;grid-template-columns:var(--cols);gap:14px;padding:13px 0;
+    border-bottom:1px solid var(--line);align-items:start;}
+  .rrow:last-child{border-bottom:none;}
+  .rrow .num{width:30px;height:30px;margin-top:1px;}
+  .rphase{font-size:14px;font-weight:700;line-height:1.25;}
+  .rwhat{font-size:13.5px;font-weight:500;}
+  .rwhy{font-size:13px;color:var(--muted);}
+  @media (max-width:760px){
+    .waves{grid-template-columns:1fr;}.mx{font-size:12px;}
+    .rhead{display:none;}
+    .rrow{grid-template-columns:34px 1fr;gap:10px;}
+    .rrow .rwhat,.rrow .rwhy{grid-column:2;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sheet">
+    <div class="tick"></div>
+    <div class="head">
+      <h1>AI chat rollout — WhatsApp-first, App-led</h1>
+      <div class="asof">as of Jun 2026</div>
+    </div>
+    <p class="sub">8 phases across 4 channels and 3 support stages, sequenced by impact. Numbers show launch order.</p>
+
+    <div class="ctx">
+      <div class="chip"><div class="big">~51%</div><div class="lbl">of support contacts come through the App — our largest channel, so it gets the deepest automation</div></div>
+      <div class="chip"><div class="big">33%</div><div class="lbl">of post-sale cases always need a human — the live-agent layer is built around this floor</div></div>
+    </div>
+
+    <div class="sech"><span>Rollout sequence</span><div class="rule"></div></div>
+    <div class="waves" id="waves">
+      <div class="wave" data-status="now">
+        <div class="whead"><span class="pill p-now">Now · live</span><span class="wdate">Jun – Aug 2026</span></div>
+        <div class="ph"><div class="num n-now">1</div><div><div class="pt">WhatsApp · live agent</div><div class="ps">Human escalation backbone — switched on first</div></div></div>
+        <div class="ph"><div class="num n-now">2</div><div><div class="pt">App · post-ownership bot <span style="color:var(--cut,#00A651);font-size:12px;">−20%</span></div><div class="ps">Deflects post-sale tickets &amp; calls — biggest lever</div></div></div>
+      </div>
+      <div class="wave" data-status="next">
+        <div class="whead"><span class="pill p-next">Next</span><span class="wdate">Nov 2026 – Feb 2027</span></div>
+        <div class="ph"><div class="num n-next">3</div><div><div class="pt">WhatsApp · post-ownership <span class="arrow">→ App</span></div><div class="ps">Redirects post-sale chats into the App bot · −20%</div></div></div>
+        <div class="ph"><div class="num n-next">4</div><div><div class="pt">WhatsApp · pre-ownership</div><div class="ps">First pre-sales / enquiry deflection · −10%</div></div></div>
+      </div>
+      <div class="wave" data-status="later">
+        <div class="whead"><span class="pill p-later">Later</span><span class="wdate">2027</span></div>
+        <div class="ph"><div class="num n-later">5</div><div><div class="pt">Mobile web <span class="arrow">→ WhatsApp</span></div><div class="ps">All mobile-web chats redirected</div></div></div>
+        <div class="ph"><div class="num n-later">6</div><div><div class="pt">App · live agent</div><div class="ps">Human handoff for selected tickets</div></div></div>
+        <div class="ph"><div class="num n-later">7</div><div><div class="pt">App · pre-ownership</div><div class="ps">Pre-sales support in the App</div></div></div>
+        <div class="ph"><div class="num n-later">8</div><div><div class="pt">Desktop web · pre + post</div><div class="ps">Web bot · −15% pre / −20% post</div></div></div>
+      </div>
+    </div>
+
+    <div class="sech"><span>Coverage map</span><div class="rule"></div></div>
+    <div class="mx">
+      <div></div><div class="mh">Pre-ownership</div><div class="mh">Post-ownership</div><div class="mh">Live agent</div>
+
+      <div class="rl">Desktop web</div>
+      <div class="cell c-later" style="grid-column:span 2;"><b>8</b><small>web bot · pre + post</small></div>
+      <div class="cell c-empty"><b>—</b></div>
+
+      <div class="rl">Mobile web</div>
+      <div class="cell c-later" style="grid-column:span 3;"><b>5</b><small>redirect to WhatsApp</small></div>
+
+      <div class="rl">App</div>
+      <div class="cell c-later"><b>7</b><small>pre-sales</small></div>
+      <div class="cell c-now"><b>2</b><small>−20% · Aug 26</small></div>
+      <div class="cell c-later"><b>6</b><small>selected tickets</small></div>
+
+      <div class="rl">WhatsApp</div>
+      <div class="cell c-next"><b>4</b><small>−10% · Feb 27</small></div>
+      <div class="cell c-next"><b>3</b><small>→ App · Nov 26</small></div>
+      <div class="cell c-now"><b>1</b><small>Jun 26</small></div>
+    </div>
+
+    <div class="legend" id="legend">
+      <div class="lg" data-f="now"><span class="sw" style="background:var(--now-bg)"></span>Live now</div>
+      <div class="lg" data-f="next"><span class="sw" style="background:var(--next-bg)"></span>Next</div>
+      <div class="lg" data-f="later"><span class="sw" style="background:var(--later-bg)"></span>Later (2027)</div>
+      <span style="color:#b0b5bb">|</span>
+      <span>1–8 = launch order · → = chat redirected · % = targeted ticket/call cut</span>
+    </div>
+
+    <div class="sech"><span>Why this sequence &amp; order</span><div class="rule"></div></div>
+    <div class="rgrid">
+      <div class="rhead"><div></div><div>Phase · date</div><div>What it does · stage coverage</div><div>Why this channel &amp; this order</div></div>
+
+      <div class="rrow">
+        <div class="num n-now">1</div>
+        <div><div class="rphase">WhatsApp · Live agent</div><div class="ps">Jun 2026</div></div>
+        <div><div class="rwhat">Turns on human live chat on WhatsApp.</div><div class="ps">Live agent — the foundation every later bot escalates to.</div></div>
+        <div class="rwhy">Cheapest, fastest live-chat to stand up. First: no deflection is safe without a human fallback.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-now">2</div>
+        <div><div class="rphase">App · Post-ownership bot V1</div><div class="ps">Aug 2026 · −20%</div></div>
+        <div><div class="rwhat">AI resolves post-purchase tickets &amp; calls in the App.</div><div class="ps">Post — sets the pattern App-Pre (7) &amp; App-live-agent (6) reuse.</div></div>
+        <div class="rwhy">App is ~51% of contacts. Second: the single biggest deflection lever, fastest payback.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-next">3</div>
+        <div><div class="rphase">WhatsApp · Post-ownership <span class="arrow">→ App</span></div><div class="ps">Nov 2026 · −20%</div></div>
+        <div><div class="rwhat">Routes WhatsApp post-sale chats into the App bot.</div><div class="ps">Post — reuses phase 2, no rebuild.</div></div>
+        <div class="rwhy">Volume too small for its own bot. Third: reuses a now-stable App bot for near-zero effort.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-next">4</div>
+        <div><div class="rphase">WhatsApp · Pre-ownership</div><div class="ps">Feb 2027 · −10%</div></div>
+        <div><div class="rwhat">First pre-sales / enquiry deflection bot.</div><div class="ps">Pre — first pre-ownership coverage in the program.</div></div>
+        <div class="rwhy">WhatsApp is the natural top-of-funnel. Fourth: pre-sales is lower value than post-sale.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-later">5</div>
+        <div><div class="rphase">Mobile web <span class="arrow">→ WhatsApp</span></div><div class="ps">2027</div></div>
+        <div><div class="rwhat">Redirects all mobile-web chats to WhatsApp.</div><div class="ps">Pre, Post &amp; Live agent — all served via WhatsApp.</div></div>
+        <div class="rwhy">Thin mobile-web volume; no dedicated bot. Fifth: a near-free win once WhatsApp covers 1–4.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-later">6</div>
+        <div><div class="rphase">App · Live agent (selected)</div><div class="ps">2027</div></div>
+        <div><div class="rwhat">Human handoff in the App for selected complex tickets.</div><div class="ps">Live agent — completes the App's Pre / Post / Live triad.</div></div>
+        <div class="rwhy">~33% of post-sale cases always need a human. Sixth: added after App-bot maturity.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-later">7</div>
+        <div><div class="rphase">App · Pre-ownership</div><div class="ps">2027</div></div>
+        <div><div class="rwhat">Pre-sales support bot inside the App.</div><div class="ps">Pre — on the App.</div></div>
+        <div class="rwhy">Captures in-App pre-purchase intent. Seventh: smaller than WhatsApp's top-of-funnel.</div>
+      </div>
+
+      <div class="rrow">
+        <div class="num n-later">8</div>
+        <div><div class="rphase">Desktop web · Pre + Post</div><div class="ps">2027 · −15% / −20%</div></div>
+        <div><div class="rwhat">Web bot covering pre and post on desktop.</div><div class="ps">Pre (−15%) &amp; Post (−20%); live agent via redirect.</div></div>
+        <div class="rwhy">Smallest contact share. Last: lowest-ROI channel, after mobile-first is done.</div>
+      </div>
+    </div>
+
+    <div class="refrain">Stand up human handoff first, then automate the App — our biggest contact channel.</div>
+
+    <div class="src" style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+      <span>Source: Post Ownership v1 analysis &amp; rollout plan, Ather Energy. Sequence and dates per current plan — verify before presenting.</span>
+      <span class="brand">ATHER</span>
+    </div>
+  </div>
+</div>
+<script>
+  var legend=document.getElementById('legend');
+  var waves=document.querySelectorAll('#waves .wave');
+  var active=null;
+  legend.querySelectorAll('.lg').forEach(function(lg){
+    lg.addEventListener('click',function(){
+      var f=lg.getAttribute('data-f');
+      active=(active===f)?null:f;
+      waves.forEach(function(w){
+        w.classList.toggle('dim', active && w.getAttribute('data-status')!==active);
+      });
+      legend.querySelectorAll('.lg').forEach(function(x){
+        x.style.fontWeight=(active && x.getAttribute('data-f')===active)?'700':'400';
+      });
+    });
+  });
+</script>
+</body>
+</html>
